@@ -4,6 +4,8 @@ const WidgetSchema = new Schema({
   type: String,
   label: String,
   value: String,
+  rows: [String],        
+  data: [Number],        
 });
 
 const SectionSchema = new Schema({
@@ -12,7 +14,7 @@ const SectionSchema = new Schema({
 });
 
 const DashboardConfigSchema = new Schema({
-  projectId: String, // ✅ FIXED (no ObjectId)
+  projectId: String,
   sections: [SectionSchema],
 });
 

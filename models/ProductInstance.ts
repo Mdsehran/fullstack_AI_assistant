@@ -1,7 +1,8 @@
 import { Schema, model, models } from "mongoose";
 
 const ProductInstanceSchema = new Schema({
-  projectId: { type: Schema.Types.ObjectId, ref: "Project" },
+  projectId: { type: String, required: true }, 
+  nameSpace: { type: String, required: true },  
   name: String,
   productType: String,
   integrations: {

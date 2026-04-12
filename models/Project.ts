@@ -1,11 +1,16 @@
-import mongoose, { Schema, model, models } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
 
-const ProjectSchema = new Schema({
-  name: String,
-  slug: { type: String, unique: true },
+export interface IProject extends Document {
+  name: string;
+  slug: string;
+  users: mongoose.Types.ObjectId[];
+}
+
+const ProjectSchema = new Schema<IProject>({
+  name: { type: String, required: true },
+  slug: { type: String, required: true, unique: true },
   users: [{ type: Schema.Types.ObjectId, ref: "User" }],
 });
 
-const Project = models.Project || model("Project", ProjectSchema);
-
-export default Project;
+export default mongoose.models.Project ||
+  mongoose.model<IProject>("Project", ProjectSchema);
