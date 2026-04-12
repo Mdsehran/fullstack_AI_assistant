@@ -1,6 +1,3 @@
-import Conversation from "../models/Conversation";
-import ProductInstance from "../models/ProductInstance";
-
 type SendMessageParams = {
   projectId: string;
   productInstanceId: string;
@@ -12,61 +9,35 @@ export async function sendMessageService({
   productInstanceId,
   message,
 }: SendMessageParams) {
-  // 1. Get product instance (check integrations)
-  const product = await ProductInstance.findById(productInstanceId);
-
-  if (!product) {
-    throw new Error("Product instance not found");
-  }
-
-  // 2. Prepare steps (for UI)
-  let steps: string[] = ["Analyzing user query"];
-
-  // 3. Integration simulation
-  let integrationContext = "";
-
-  if (product.integrations?.shopify) {
-    integrationContext += "Shopify data: Orders are stable.\n";
-    steps.push("Checking Shopify data");
-  }
-
-  if (product.integrations?.crm) {
-    integrationContext += "CRM data: Leads increased by 20%.\n";
-    steps.push("Fetching CRM insights");
-  }
-
-  // 4. Final AI step
-  steps.push("Generating AI response");
-
-  // 5. Prepare AI input
-  const aiInput = `
-User Message: ${message}
-${integrationContext}
-Respond like an AI assistant.
-`;
-
-  // 6. AI response (mock)
-  const aiResponse = await fakeAI(aiInput);
-
-  // 7. Save conversation
-  const conversation = await Conversation.create({
-    projectId,
-    productInstanceId,
-    messages: [
-      { role: "user", content: message },
-      { role: "assistant", content: aiResponse },
-    ],
-  });
-
-  // 8. Return clean response
-  return {
-    reply: aiResponse,
-    steps,
-    conversation,
-  };
+  const steps: string[] = ["Analyzing user query", "Generating AI response"];
+  const reply = await callChatGPT(message);
+  return { reply, steps };
 }
 
-// 🔥 
-async function fakeAI(input: string) {
-  return `🤖 AI Response based on: ${input.substring(0, 80)}...`;
+async function callChatGPT(userMessage: string): Promise<string> {
+  const res = await fetch("https://chatgpt-42.p.rapidapi.com/conversationgpt4-2", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-rapidapi-host": "chatgpt-42.p.rapidapi.com",
+      "x-rapidapi-key": process.env.RAPIDAPI_KEY!,
+    },
+    body: JSON.stringify({
+      messages: [{ role: "user", content: userMessage }],
+      system_prompt: "",
+      temperature: 0.9,
+      top_k: 5,
+      top_p: 0.9,
+      max_tokens: 256,
+      web_access: false,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`ChatGPT API error: ${res.status} — ${err}`);
+  }
+
+  const data = await res.json();
+  return data?.result ?? data?.choices?.[0]?.message?.content ?? "No response from AI.";
 }

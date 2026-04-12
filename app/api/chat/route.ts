@@ -1,40 +1,23 @@
+import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { sendMessageService } from "@/services/chat.service";
-import { requireProjectAccess } from "@/access/project.access";
-import { sendMessageSchema } from "@/schemas/chat.schema";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     await connectDB();
 
     const body = await req.json();
+    const { userId, projectId, productInstanceId, message } = body;
 
-    // Zod validation
-    const parsed = sendMessageSchema.safeParse(body);
-
-    if (!parsed.success) {
-      return Response.json(
-        {error: parsed.error.issues },
-        { status: 400 }
-      );
+    if (!message || !projectId || !productInstanceId) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const { userId, projectId, productInstanceId, message } = parsed.data;
+    const result = await sendMessageService({ projectId, productInstanceId, message });
 
-    await requireProjectAccess(userId, projectId);
-
-    const result = await sendMessageService({
-      projectId,
-      productInstanceId,
-      message,
-    });
-
-    return Response.json({ success: true, data: result });
-
-  } catch (error: any) {
-    return Response.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ reply: result.reply, steps: result.steps });
+  } catch (err: any) {
+    console.error("Chat route error:", err.message);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
